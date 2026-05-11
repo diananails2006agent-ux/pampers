@@ -69,7 +69,7 @@ APPOINTMENTS: ${appts}
 MESSAGE: "${msg}"
 Reply ONLY with JSON (no backticks): {"language":"en","needs_address":false,"detected_address":null,"client_email":null,"appointment_requested":false,"acrylic_requested":false,"client_name":null,"service_requested":null,"service_duration_mins":60,"proposed_datetime":null,"zone_ok":true,"reply":"your reply here"}`;
 
-  const response = await anthropic.messages.create({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] });
+  const response = await anthropic.messages.create({ model: "claude-sonnet-4-5", max_tokens: 1000, messages: [{ role: "user", content: prompt }] });
   return JSON.parse(response.content[0].text.replace(/```json|```/g,"").trim());
 }
 
