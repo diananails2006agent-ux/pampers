@@ -11,8 +11,10 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+function getTwilioClient() {
+  return twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+}
 
 const SERVICES = `Classic Manicure $45/30min, Gel Manicure $75/1hr, Kids Manicure $20, Teen Manicure $25, Classic Pedicure $75/1hr, Gehwol Pedicure $100/1hr15min, Kids Pedicure $40, Teen Pedicure $50, Senior Mani-Pedi $130/1hr45min, Kids Mani-Pedi $55, Teen Mani-Pedi $70, French Design $15, Polish Change Fingers $25, Polish Change Toes $45, Remove Acrylic $30, 10min Massage $25, Eyebrow wax $30, Lip wax $20, Chin wax $20. Travel fee applies. NO acrylics.`;
 
@@ -144,7 +146,7 @@ app.post("/webhook/voice/process", async (req, res) => {
     const a = await processMessage(speech, appts);
     twiml.say({ voice: a.language==="es"?"Polly.Conchita":"Polly.Joanna" }, a.reply);
     if (a.appointment_requested && a.proposed_datetime) {
-      await twilioClient.messages.create({ from: process.env.TWILIO_PHONE_NUMBER, to: caller, body: `✅ Pamper Me: Appointment confirmed! 💅 ${a.service_requested||"Nail Service"} at ${a.detected_address}. Questions: 215-490-1515` });
+      await getTwilioClient().messages.create({ from: process.env.TWILIO_PHONE_NUMBER, to: caller, body: `✅ Pamper Me: Appointment confirmed! 💅 ${a.service_requested||"Nail Service"} at ${a.detected_address}. Questions: 215-490-1515` });
     }
   } catch(err) { twiml.say({ voice:"Polly.Joanna" }, "Sorry, please text 215-490-1515 to book."); }
   res.type("text/xml").send(twiml.toString());
