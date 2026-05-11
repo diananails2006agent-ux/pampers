@@ -1,11 +1,9 @@
 {
   "name": "pamperme-agent",
-  "version": "3.0.0",
-  "description": "Booking agent for Pamper Me Mobile Nails & Spa — Voice + SMS + Yahoo Mail",
+  "version": "5.0.0",
+  "description": "Pamper Me Agent with Anthropic",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
+  "scripts": { "start": "node index.js" },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",
     "dotenv": "^16.0.0",
