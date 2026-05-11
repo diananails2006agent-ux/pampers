@@ -59,7 +59,7 @@ MESSAGE: "${msg}"
 Respond ONLY with valid JSON (no markdown, no backticks):
 {"language":"en","needs_address":false,"detected_address":null,"client_email":null,"appointment_requested":false,"acrylic_requested":false,"client_name":null,"service_requested":null,"service_duration_mins":60,"proposed_datetime":null,"reply":"response here"}`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   const result = await model.generateContent(prompt);
   let text = result.response.text().trim();
   text = text.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
