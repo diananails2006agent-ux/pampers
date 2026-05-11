@@ -82,7 +82,6 @@ async function processMessage(text, appointments) {
   return a;
 }
 
-// YAHOO IMAP
 function getImap() {
   return new Imap({ user: process.env.YAHOO_EMAIL, password: process.env.YAHOO_APP_PASSWORD, host: "imap.mail.yahoo.com", port: 993, tls: true, tlsOptions: { rejectUnauthorized: false } });
 }
@@ -115,7 +114,6 @@ async function sendReply(to, subject, text) {
   await t.sendMail({ from: `Pamper Me Mobile Nails <${process.env.YAHOO_EMAIL}>`, to, subject: subject.startsWith("Re:")?subject:`Re: ${subject}`, text: `${text}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com` });
 }
 
-// WEBHOOKS
 app.post("/webhook/sms", async (req, res) => {
   const body = req.body.Body||"", from = req.body.From||"";
   console.log(`💬 SMS de ${from}: ${body}`);
@@ -149,7 +147,6 @@ app.post("/webhook/voice/process", async (req, res) => {
   res.type("text/xml").send(twiml.toString());
 });
 
-// CHECK YAHOO
 async function checkYahooMail() {
   try {
     const emails = await getUnreadEmails();
