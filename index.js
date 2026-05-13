@@ -110,15 +110,21 @@ async function getUnreadEmails() {
 }
 
 async function sendReply(to, subject, replyText) {
-  const apiKey = (process.env.SENDGRID_API_KEY || "").trim();
-  console.log(`🔑 SendGrid key starts with: ${apiKey.substring(0,5)}`);
-  sgMail.setApiKey(apiKey);
+  const nodemailer = require("nodemailer");
+  const transporter = nodemailer.createTransport({
+    host: "smtp.mail.yahoo.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.YAHOO_EMAIL,
+      pass: process.env.YAHOO_APP_PASSWORD,
+    },
+  });
   const fullText = `${replyText}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com`;
   const subj = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
-  await sgMail.send({
+  await transporter.sendMail({
+    from: `Pamper Me Mobile Nails <${process.env.YAHOO_EMAIL}>`,
     to,
-    from: { email: "diananails2006agent@gmail.com", name: "Pamper Me Mobile Nails" },
-    replyTo: "DiaNails19@yahoo.com",
     subject: subj,
     text: fullText,
   });
