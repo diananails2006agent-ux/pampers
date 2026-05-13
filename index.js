@@ -110,8 +110,11 @@ async function getUnreadEmails() {
 }
 
 async function sendReply(to, subject, text) {
-  const t = nodemailer.createTransport({ host: "smtp.mail.yahoo.com", port: 587, secure: false, auth: { user: process.env.YAHOO_EMAIL, pass: process.env.YAHOO_APP_PASSWORD } });
-  await t.sendMail({ from: `Pamper Me Mobile Nails <${process.env.YAHOO_EMAIL}>`, to, subject: subject.startsWith("Re:")?subject:`Re: ${subject}`, text: `${text}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com` });
+  const t = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
+  });
+  await t.sendMail({ from: `Pamper Me Mobile Nails <${process.env.GMAIL_USER}>`, to, subject: subject.startsWith("Re:")?subject:`Re: ${subject}`, text: `${text}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com` });
 }
 
 app.post("/webhook/sms", async (req, res) => {
@@ -152,16 +155,19 @@ async function checkYahooMail() {
     const emails = await getUnreadEmails();
     if (emails.length===0) { console.log("📭 No hay correos nuevos"); return; }
     console.log(`📧 ${emails.length} correo(s) nuevo(s) en Yahoo`);
-    const appts = await getUpcomingAppointments().catch(()=>[]);
+    const appts = await getUpcomingAppointments().catch(()=>{ console.log("⚠️ Calendar no disponible"); return []; });
     for (const email of emails) {
       try {
+        console.log(`📨 Procesando de: ${email.from}`);
         const a = await processMessage(email.body||email.subject, appts);
+        console.log(`🤖 Respuesta lista`);
         const to = email.replyTo||email.from;
+        console.log(`📤 Enviando a: ${to}`);
         await sendReply(to, email.subject, a.reply);
         console.log(`✉️ Respuesta enviada a ${to}`);
-      } catch(e) { console.error(`❌ Error correo:`, e.message); }
+      } catch(e) { console.error(`❌ Error correo:`, e.message, e.stack); }
     }
-  } catch(err) { console.error("❌ Yahoo check:", err.message); }
+  } catch(err) { console.error("❌ Yahoo check:", err.message, err.stack); }
 }
 
 setInterval(checkYahooMail, 5 * 60 * 1000);
