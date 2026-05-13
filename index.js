@@ -6,15 +6,15 @@ const { google } = require("googleapis");
 const Anthropic = require("@anthropic-ai/sdk");
 const Imap = require("imap");
 const { simpleParser } = require("mailparser");
-const sgMail = require("@sendgrid/mail");
-
+const nodemailer = require("nodemailer");
+ 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-
+ 
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
+ 
 const BUSINESS = {
   name: "Pamper Me Mobile Nails & Spa", owner: "Diana",
   phone: "215-490-1515", email: "DiaNails19@yahoo.com",
@@ -27,13 +27,13 @@ ADD-ONS: French Design $15, Polish Change Fingers $25, Polish Change Toes $45, R
 WAXING: Eyebrow $30, Lip $20, Chin $20
 NOTE: Travel fee applies. Natural nails ONLY — NO acrylics.`
 };
-
+ 
 function getGoogleAuth() {
   const auth = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI);
   auth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
   return auth;
 }
-
+ 
 async function getUpcomingAppointments() {
   const auth = getGoogleAuth();
   const calendar = google.calendar({ version: "v3", auth });
@@ -43,7 +43,7 @@ async function getUpcomingAppointments() {
   const res = await calendar.events.list({ calendarId: "primary", timeMin: start.toISOString(), timeMax: end.toISOString(), singleEvents: true, orderBy: "startTime" });
   return (res.data.items||[]).map(e=>({ title: e.summary, start: e.start.dateTime, address: e.location||"" }));
 }
-
+ 
 async function createAppointment(name, service, address, dt, mins) {
   const auth = getGoogleAuth();
   const calendar = google.calendar({ version: "v3", auth });
@@ -54,12 +54,12 @@ async function createAppointment(name, service, address, dt, mins) {
     end: { dateTime: end.toISOString(), timeZone: "America/New_York" }
   }});
 }
-
+ 
 async function analyzeMessage(msg, appointments) {
   const appts = appointments.length > 0 ? appointments.map(a=>`- ${a.title} at ${a.start}`).join("\n") : "No appointments yet.";
   const today = new Date().toLocaleDateString("en-US",{weekday:"long",timeZone:"America/New_York"});
   const time = new Date().toLocaleTimeString("en-US",{timeZone:"America/New_York",hour:"2-digit",minute:"2-digit"});
-
+ 
   const prompt = `You are a booking assistant for Pamper Me Mobile Nails & Spa (owner: Diana).
 TODAY: ${today}, ${time} Eastern Time
 RULES: Only book today/tomorrow. Hours: Tue-Fri 9:30am-5pm, Sat 10am-5pm, closed Sun/Mon. No acrylics. Ask for address if missing. Detect language and reply in same language. Be warm, use emoji 💅. Travel fee applies.
@@ -68,11 +68,11 @@ SERVICES: ${BUSINESS.services}
 APPOINTMENTS: ${appts}
 MESSAGE: "${msg}"
 Reply ONLY with JSON (no backticks): {"language":"en","needs_address":false,"detected_address":null,"client_email":null,"appointment_requested":false,"acrylic_requested":false,"client_name":null,"service_requested":null,"service_duration_mins":60,"proposed_datetime":null,"zone_ok":true,"reply":"your reply here"}`;
-
+ 
   const response = await anthropic.messages.create({ model: "claude-haiku-4-5-20251001", max_tokens: 1000, messages: [{ role: "user", content: prompt }] });
   return JSON.parse(response.content[0].text.replace(/```json|```/g,"").trim());
 }
-
+ 
 async function processMessage(text, appointments) {
   const a = await analyzeMessage(text, appointments);
   if (a.appointment_requested && !a.acrylic_requested && a.detected_address && a.proposed_datetime && a.client_name) {
@@ -81,11 +81,11 @@ async function processMessage(text, appointments) {
   }
   return a;
 }
-
+ 
 function getImap() {
   return new Imap({ user: process.env.YAHOO_EMAIL, password: process.env.YAHOO_APP_PASSWORD, host: "imap.mail.yahoo.com", port: 993, tls: true, tlsOptions: { rejectUnauthorized: false } });
 }
-
+ 
 async function getUnreadEmails() {
   return new Promise((resolve, reject) => {
     const imap = getImap(); const results = [];
@@ -108,7 +108,7 @@ async function getUnreadEmails() {
     imap.connect();
   });
 }
-
+ 
 async function sendReply(to, subject, replyText) {
   const nodemailer = require("nodemailer");
   const transporter = nodemailer.createTransport({
@@ -129,7 +129,7 @@ async function sendReply(to, subject, replyText) {
     text: fullText,
   });
 }
-
+ 
 app.post("/webhook/sms", async (req, res) => {
   const body = req.body.Body||"", from = req.body.From||"";
   console.log(`💬 SMS de ${from}: ${body}`);
@@ -141,14 +141,14 @@ app.post("/webhook/sms", async (req, res) => {
     res.type("text/xml").send(twiml.toString());
   } catch(err) { console.error("❌ SMS:", err.message); res.status(500).send("Error"); }
 });
-
+ 
 app.post("/webhook/voice", async (req, res) => {
   const twiml = new twilio.twiml.VoiceResponse();
   const g = twiml.gather({ input: "speech", action: "/webhook/voice/process", method: "POST", language: "en-US", speechTimeout: "auto" });
   g.say({ voice: "Polly.Joanna" }, "Thank you for calling Pamper Me Mobile Nails! How can I help you? Gracias por llamar a Pamper Me. ¿En qué le puedo ayudar?");
   res.type("text/xml").send(twiml.toString());
 });
-
+ 
 app.post("/webhook/voice/process", async (req, res) => {
   const speech = req.body.SpeechResult||"", caller = req.body.From||"";
   const twiml = new twilio.twiml.VoiceResponse();
@@ -162,7 +162,7 @@ app.post("/webhook/voice/process", async (req, res) => {
   } catch(err) { twiml.say({ voice: "Polly.Joanna" }, "Sorry, please text 215-490-1515 to book."); }
   res.type("text/xml").send(twiml.toString());
 });
-
+ 
 async function checkYahooMail() {
   try {
     const emails = await getUnreadEmails();
@@ -182,11 +182,11 @@ async function checkYahooMail() {
     }
   } catch(err) { console.error("❌ Yahoo check:", err.message, err.stack); }
 }
-
+ 
 setInterval(checkYahooMail, 5 * 60 * 1000);
-
+ 
 app.get("/", (req, res) => res.send("<h2>💅 Pamper Me Agent — Active</h2>"));
-
+ 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Pamper Me Agent running on port ${PORT}`);
