@@ -109,12 +109,15 @@ async function getUnreadEmails() {
   });
 }
 
-async function sendReply(to, subject, text) {
-  const t = nodemailer.createTransport({
-    service: "gmail",
-    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
-  });
-  await t.sendMail({ from: `Pamper Me Mobile Nails <${process.env.GMAIL_USER}>`, to, subject: subject.startsWith("Re:")?subject:`Re: ${subject}`, text: `${text}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com` });
+async function sendReply(to, subject, replyText) {
+  const auth = getGoogleAuth();
+  const gmail = google.gmail({ version: "v1", auth });
+  const fullText = `${replyText}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com`;
+  const subj = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
+  const raw = Buffer.from(
+    `To: ${to}\nSubject: ${subj}\nContent-Type: text/plain; charset=utf-8\n\n${fullText}`
+  ).toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
+  await gmail.users.messages.send({ userId: "me", resource: { raw } });
 }
 
 app.post("/webhook/sms", async (req, res) => {
