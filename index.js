@@ -110,7 +110,9 @@ async function getUnreadEmails() {
 }
 
 async function sendReply(to, subject, replyText) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  const apiKey = (process.env.SENDGRID_API_KEY || "").trim();
+  console.log(`🔑 SendGrid key starts with: ${apiKey.substring(0,5)}`);
+  sgMail.setApiKey(apiKey);
   const fullText = `${replyText}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com`;
   const subj = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
   await sgMail.send({
