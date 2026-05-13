@@ -110,7 +110,7 @@ async function getUnreadEmails() {
 }
 
 async function sendReply(to, subject, text) {
-  const t = nodemailer.createTransport({ host: "smtp.mail.yahoo.com", port: 465, secure: true, auth: { user: process.env.YAHOO_EMAIL, pass: process.env.YAHOO_APP_PASSWORD } });
+  const t = nodemailer.createTransport({ host: "smtp.mail.yahoo.com", port: 587, secure: false, auth: { user: process.env.YAHOO_EMAIL, pass: process.env.YAHOO_APP_PASSWORD } });
   await t.sendMail({ from: `Pamper Me Mobile Nails <${process.env.YAHOO_EMAIL}>`, to, subject: subject.startsWith("Re:")?subject:`Re: ${subject}`, text: `${text}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com` });
 }
 
