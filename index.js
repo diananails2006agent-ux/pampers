@@ -6,7 +6,7 @@ const { google } = require("googleapis");
 const Anthropic = require("@anthropic-ai/sdk");
 const Imap = require("imap");
 const { simpleParser } = require("mailparser");
-const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
@@ -110,14 +110,16 @@ async function getUnreadEmails() {
 }
 
 async function sendReply(to, subject, replyText) {
-  const auth = getGoogleAuth();
-  const gmail = google.gmail({ version: "v1", auth });
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
   const fullText = `${replyText}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com`;
   const subj = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
-  const raw = Buffer.from(
-    `To: ${to}\nSubject: ${subj}\nContent-Type: text/plain; charset=utf-8\n\n${fullText}`
-  ).toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
-  await gmail.users.messages.send({ userId: "me", resource: { raw } });
+  await sgMail.send({
+    to,
+    from: { email: "diananails2006agent@gmail.com", name: "Pamper Me Mobile Nails" },
+    replyTo: "DiaNails19@yahoo.com",
+    subject: subj,
+    text: fullText,
+  });
 }
 
 app.post("/webhook/sms", async (req, res) => {
