@@ -182,10 +182,18 @@ async function checkYahooMail() {
     for (const email of emails) {
       try {
         console.log(`📨 Procesando de: ${email.from}`);
-        console.log(`📝 Contenido: ${(email.body||email.subject||"").substring(0,100)}`);
-        const a = await processMessage(email.body||email.subject, appts);
+        const body = email.body||email.subject||"";
+        console.log(`📝 Contenido: ${body.substring(0,100)}`);
+        const a = await processMessage(body, appts);
         console.log(`🤖 Respuesta lista: ${a.reply.substring(0,50)}`);
-        const to = email.replyTo||email.from;
+        
+        // Si es formulario de Squarespace, responder al EMAIL del cliente
+        let to = email.replyTo||email.from;
+        if (a.client_email) {
+          to = a.client_email;
+          console.log(`📋 Formulario Squarespace detectado, respondiendo a cliente: ${to}`);
+        }
+        
         console.log(`📤 Enviando a: ${to}`);
         await sendReply(to, email.subject, a.reply);
         console.log(`✉️ Respuesta enviada a ${to}`);
