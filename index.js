@@ -182,13 +182,17 @@ async function checkYahooMail() {
     for (const email of emails) {
       try {
         console.log(`📨 Procesando de: ${email.from}`);
+        console.log(`📝 Contenido: ${(email.body||email.subject||"").substring(0,100)}`);
         const a = await processMessage(email.body||email.subject, appts);
-        console.log(`🤖 Respuesta lista`);
+        console.log(`🤖 Respuesta lista: ${a.reply.substring(0,50)}`);
         const to = email.replyTo||email.from;
         console.log(`📤 Enviando a: ${to}`);
         await sendReply(to, email.subject, a.reply);
         console.log(`✉️ Respuesta enviada a ${to}`);
-      } catch(e) { console.error(`❌ Error correo:`, e.message, e.stack); }
+      } catch(e) { 
+        console.error(`❌ Error correo:`, e.message);
+        console.error(`❌ Stack:`, e.stack);
+      }
     }
   } catch(err) { console.error("❌ Yahoo check:", err.message, err.stack); }
 }
