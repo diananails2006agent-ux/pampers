@@ -148,6 +148,8 @@ async function sendReply(to, subject, replyText) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
   const fullText = `${replyText}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com`;
   const subj = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
+  
+  // Enviar con SendGrid
   await sgMail.send({
     to,
     from: { email: "diananails2006agent@gmail.com", name: "Pamper Me Mobile Nails" },
@@ -155,6 +157,22 @@ async function sendReply(to, subject, replyText) {
     subject: subj,
     text: fullText,
   });
+
+  // Guardar copia en Gmail Sent
+  try {
+    const auth = getGoogleAuth();
+    const gmail = google.gmail({ version: "v1", auth });
+    const raw = Buffer.from(
+      `From: Pamper Me Mobile Nails <diananails2006agent@gmail.com>\nTo: ${to}\nSubject: ${subj}\nContent-Type: text/plain; charset=utf-8\n\n${fullText}`
+    ).toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
+    await gmail.users.messages.insert({
+      userId: "me",
+      resource: { raw, labelIds: ["SENT"] },
+    });
+    console.log(`📁 Copia guardada en Gmail Sent`);
+  } catch(gmailErr) {
+    console.error("⚠️ No se pudo guardar copia en Gmail:", gmailErr.message);
+  }
 }
 
 app.post("/webhook/sms", async (req, res) => {
