@@ -88,7 +88,10 @@ OTHER RULES:
 - Book appointments up to 7 days in advance.
 - No acrylic nails - natural nails ONLY. If requested, decline politely.
 - Detect language and reply in SAME LANGUAGE as the client.
-- Be warm, cordial, professional. Use occasional emoji 💅
+- Always start with a warm greeting using the client name if available. Example: "Hi [Name]! Thank you for reaching out to Pamper Me Mobile Nails & Spa! ✨💅"
+- If language is Spanish: "Hola [Nombre]! Gracias por contactarnos en Pamper Me Mobile Nails & Spa! ✨💅"
+- Sign off warmly. Example: "Warmly, Diana - Pamper Me Mobile Nails & Spa ✨"
+- Be warm, cordial, professional. Use occasional emoji 💅✨
 - NEVER use markdown (no asterisks, no bold, no bullets). Plain text only.
 - Keep replies concise and friendly.
 
@@ -142,21 +145,13 @@ async function getUnreadEmails() {
 }
 
 async function sendReply(to, subject, replyText) {
-  const sgMail = require("@sendgrid/mail");
-  const transporter = nodemailer.createTransport({
-    host: "smtp.mail.yahoo.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.YAHOO_EMAIL,
-      pass: process.env.YAHOO_APP_PASSWORD,
-    },
-  });
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
   const fullText = `${replyText}\n\n---\nPamper Me Mobile Nails & Spa\n📱 215-490-1515\n🌐 pampermemobilenails.com`;
   const subj = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
-  await transporter.sendMail({
-    from: `Pamper Me Mobile Nails <${process.env.YAHOO_EMAIL}>`,
+  await sgMail.send({
     to,
+    from: { email: "diananails2006agent@gmail.com", name: "Pamper Me Mobile Nails" },
+    replyTo: "DiaNails19@yahoo.com",
     subject: subj,
     text: fullText,
   });
@@ -219,6 +214,61 @@ async function checkYahooMail() {
         console.log(`📤 Enviando a: ${to}`);
         await sendReply(to, email.subject, a.reply);
         console.log(`✉️ Respuesta enviada a ${to}`);
+        
+        // Enviar aviso urgente a Diana si es solicitud de cita
+        if (a.appointment_requested && !a.acrylic_requested && !a.out_of_coverage) {
+          const dianaAlert = `🚨 NUEVA SOLICITUD DE CITA - ACCIÓN REQUERIDA 🚨
+
+Cliente: ${a.client_name || "No especificado"}
+Email: ${a.client_email || to}
+Dirección: ${a.detected_address || "No especificada"}
+Servicio: ${a.service_requested || "No especificado"}
+Fecha solicitada: ${a.proposed_datetime || "Por confirmar"}
+
+ACCIÓN REQUERIDA:
+1. Confirmar el costo del travel fee segun la direccion
+2. Enviar link de pago al cliente (50% de deposito)
+3. Confirmar la cita una vez recibido el pago
+
+El agente ya respondio al cliente y le indico que debe pagar para confirmar la cita.
+
+--- Pamper Me Agent ---`;
+
+          await sendReply(
+            "DiaNails19@yahoo.com",
+            "🚨 NUEVA SOLICITUD DE CITA - ACCION REQUERIDA",
+            dianaAlert
+          );
+          console.log(`🔔 Aviso urgente enviado a Diana por email`);
+
+          // Crear evento urgente en Google Calendar
+          try {
+            const auth = getGoogleAuth();
+            const calendar = google.calendar({ version: "v3", auth });
+            const now = new Date();
+            const eventStart = new Date(now.getTime() + 2 * 60000); // 2 minutos desde ahora
+            const eventEnd = new Date(now.getTime() + 17 * 60000); // 15 minutos de duración
+            
+            await calendar.events.insert({
+              calendarId: "primary",
+              resource: {
+                summary: `🚨 NUEVA SOLICITUD - ${a.client_name || "Cliente"}`,
+                description: `ACCION REQUERIDA:\n\nCliente: ${a.client_name || "No especificado"}\nEmail: ${a.client_email || to}\nDireccion: ${a.detected_address || "No especificada"}\nServicio: ${a.service_requested || "No especificado"}\nFecha: ${a.proposed_datetime || "Por confirmar"}\n\n1. Confirmar travel fee\n2. Enviar link de pago (50% deposito)`,
+                start: { dateTime: eventStart.toISOString(), timeZone: "America/New_York" },
+                end: { dateTime: eventEnd.toISOString(), timeZone: "America/New_York" },
+                reminders: {
+                  useDefault: false,
+                  overrides: [
+                    { method: "popup", minutes: 0 },
+                  ],
+                },
+              },
+            });
+            console.log(`📅 Evento urgente creado en Google Calendar`);
+          } catch(calErr) {
+            console.error("⚠️ No se pudo crear evento en Calendar:", calErr.message);
+          }
+        }
       } catch(e) { 
         console.error(`❌ Error correo:`, e.message);
         console.error(`❌ Stack:`, e.stack);
