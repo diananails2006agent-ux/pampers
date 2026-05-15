@@ -233,8 +233,9 @@ async function checkYahooMail() {
         await sendReply(to, email.subject, a.reply);
         console.log(`✉️ Respuesta enviada a ${to}`);
         
-        // Enviar aviso urgente a Diana si es solicitud de cita
-        if (a.appointment_requested && !a.acrylic_requested && !a.out_of_coverage) {
+        // Enviar aviso urgente a Diana SOLO si tiene toda la info completa
+        if (a.appointment_requested && !a.acrylic_requested && !a.out_of_coverage && 
+            a.detected_address && a.service_requested && a.client_name) {
           const dianaAlert = `🚨 NUEVA SOLICITUD DE CITA - ACCIÓN REQUERIDA 🚨
 
 Cliente: ${a.client_name || "No especificado"}
